@@ -9,9 +9,9 @@
 
 fn main() {
     let mut x = 100;
-    let y = &mut x;
-    *y += 100;
+    let y = &mut x; // 可变借用
+    *y += 100; // x = 200
     let z = &mut x;
-    *z += 1000;
+    *z += 1000; // x = 1200
     assert_eq!(x, 1200);
 }

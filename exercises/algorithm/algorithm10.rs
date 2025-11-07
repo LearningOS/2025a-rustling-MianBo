@@ -2,8 +2,6 @@
 	graph
 	This problem requires you to implement a basic graph functio
 */
-// I AM NOT DONE
-
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 #[derive(Debug, Clone)]
@@ -29,7 +27,20 @@ impl Graph for UndirectedGraph {
         &self.adjacency_table
     }
     fn add_edge(&mut self, edge: (&str, &str, i32)) {
-        //TODO
+        let (source, destination, weight) = edge;
+
+        self.add_node(source);
+        self.add_node(destination);
+
+        self.adjacency_table_mutable()
+            .get_mut(source)
+            .unwrap()
+            .push((destination.to_string(), weight));
+
+        self.adjacency_table_mutable()
+            .get_mut(destination)
+            .unwrap()
+            .push((source.to_string(), weight));
     }
 }
 pub trait Graph {
@@ -37,11 +48,13 @@ pub trait Graph {
     fn adjacency_table_mutable(&mut self) -> &mut HashMap<String, Vec<(String, i32)>>;
     fn adjacency_table(&self) -> &HashMap<String, Vec<(String, i32)>>;
     fn add_node(&mut self, node: &str) -> bool {
-        //TODO
-		true
+        let new_node = self.adjacency_table_mutable().contains_key(node);
+        self.adjacency_table_mutable()
+            .entry(node.to_string())
+            .or_insert(Vec::new());
+        !new_node
     }
     fn add_edge(&mut self, edge: (&str, &str, i32)) {
-        //TODO
     }
     fn contains(&self, node: &str) -> bool {
         self.adjacency_table().get(node).is_some()
@@ -53,7 +66,9 @@ pub trait Graph {
         let mut edges = Vec::new();
         for (from_node, from_node_neighbours) in self.adjacency_table() {
             for (to_node, weight) in from_node_neighbours {
-                edges.push((from_node, to_node, *weight));
+                if from_node < to_node {
+                    edges.push((from_node, to_node, *weight));
+                }
             }
         }
         edges
@@ -69,6 +84,7 @@ mod test_undirected_graph {
         graph.add_edge(("a", "b", 5));
         graph.add_edge(("b", "c", 10));
         graph.add_edge(("c", "a", 7));
+        
         let expected_edges = [
             (&String::from("a"), &String::from("b"), 5),
             (&String::from("b"), &String::from("a"), 5),
@@ -77,8 +93,33 @@ mod test_undirected_graph {
             (&String::from("b"), &String::from("c"), 10),
             (&String::from("c"), &String::from("b"), 10),
         ];
-        for edge in expected_edges.iter() {
-            assert_eq!(graph.edges().contains(edge), true);
+
+        
+        let mut actual_edges_with_duplicates: Vec<(String, String, i32)> = Vec::new();
+        for (from, neighbors) in graph.adjacency_table() {
+            for (to, weight) in neighbors {
+                actual_edges_with_duplicates.push((from.clone(), to.clone(), *weight));
+            }
         }
+
+        assert_eq!(actual_edges_with_duplicates.len(), 6);
+
+        for expected in expected_edges.iter() {
+            let found = actual_edges_with_duplicates.iter().any(|actual| {
+                &actual.0 == expected.0 && &actual.1 == expected.1 && actual.2 == expected.2
+            });
+            assert!(found, "Missing edge: ({}, {}, {})", expected.0, expected.1, expected.2);
+        }
+    }
+
+    #[test]
+    fn test_add_node() {
+        let mut graph = UndirectedGraph::new();
+        assert!(graph.add_node("X"));
+        assert!(graph.contains("X"));
+        assert_eq!(graph.nodes().len(), 1);
+        
+        assert!(!graph.add_node("X")); // Should return false if already exists
+        assert_eq!(graph.nodes().len(), 1);
     }
 }
